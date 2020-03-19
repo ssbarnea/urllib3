@@ -248,14 +248,17 @@ class Retry(object):
 
     def parse_retry_after(self, retry_after):
         # Whitespace: https://tools.ietf.org/html/rfc7230#section-3.2.4
-        if re.match(r"^\s*[0-9]+\s*$", retry_after):
-            seconds = int(retry_after)
-        else:
-            retry_date_tuple = email.utils.parsedate(retry_after)
-            if retry_date_tuple is None:
-                raise InvalidHeader("Invalid Retry-After header: %s" % retry_after)
-            retry_date = time.mktime(retry_date_tuple)
-            seconds = retry_date - time.time()
+        seconds = 0
+        try:
+            if re.match(r"^\s*[0-9]+\s*$", retry_after):
+                seconds = int(retry_after)
+            else:
+                retry_date_tuple = email.utils.parsedate(retry_after)
+                retry_date = time.mktime(retry_date_tuple)
+                seconds = retry_date - time.time()
+        except Exception:
+            logging.warning("Received Invalid Retry-After header: %s, falling back to 60 seconds." % retry_after)
+            seconds = 60
 
         if seconds < 0:
             seconds = 0
